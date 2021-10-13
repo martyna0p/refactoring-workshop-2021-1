@@ -63,6 +63,26 @@ Controller::Controller(IPort& p_displayPort, IPort& p_foodPort, IPort& p_scorePo
     }
 }
 
+void Controller::eatFood()
+{
+    m_scorePort.send(std::make_unique<EventT<ScoreInd>>());
+    m_foodPort.send(std::make_unique<EventT<FoodReq>>());
+}
+
+// void Controller::loseDied(Segment& newHead)
+// {
+//     for (auto segment : m_segments) {
+
+//         if (segment.x == newHead.x and segment.y == newHead.y) 
+//         {
+//             m_scorePort.send(std::make_unique<EventT<LooseInd>>());
+//             lost = true;
+//             break;
+//         }
+//     } 
+
+// }
+
 void Controller::receive(std::unique_ptr<Event> e)
 {
     try {
@@ -77,6 +97,9 @@ void Controller::receive(std::unique_ptr<Event> e)
 
         bool lost = false;
 
+
+        // loseDied(newHead);
+
         // LOSE DIED
         for (auto segment : m_segments) {
             if (segment.x == newHead.x and segment.y == newHead.y) {
@@ -89,8 +112,7 @@ void Controller::receive(std::unique_ptr<Event> e)
         // EAT SOME FOOD
         if (not lost) {
             if (std::make_pair(newHead.x, newHead.y) == m_foodPosition) {
-                m_scorePort.send(std::make_unique<EventT<ScoreInd>>());
-                m_foodPort.send(std::make_unique<EventT<FoodReq>>());
+                eatFood();
             } 
             // LOSE OUT OF MAP
             else if (newHead.x < 0 or newHead.y < 0 or
@@ -111,6 +133,9 @@ void Controller::receive(std::unique_ptr<Event> e)
                 }
             }
         }
+
+
+
         // DISPLAY NEW HEAD
         if (not lost) {
             m_segments.push_front(newHead);
