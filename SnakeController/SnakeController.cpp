@@ -77,6 +77,7 @@ void Controller::receive(std::unique_ptr<Event> e)
 
         bool lost = false;
 
+        // LOSE DIED
         for (auto segment : m_segments) {
             if (segment.x == newHead.x and segment.y == newHead.y) {
                 m_scorePort.send(std::make_unique<EventT<LooseInd>>());
@@ -85,38 +86,40 @@ void Controller::receive(std::unique_ptr<Event> e)
             }
         }
 
+        // EAT SOME FOOD
         if (not lost) {
             if (std::make_pair(newHead.x, newHead.y) == m_foodPosition) {
                 m_scorePort.send(std::make_unique<EventT<ScoreInd>>());
                 m_foodPort.send(std::make_unique<EventT<FoodReq>>());
-            } else if (newHead.x < 0 or newHead.y < 0 or
+            } 
+            // LOSE OUT OF MAP
+            else if (newHead.x < 0 or newHead.y < 0 or
                        newHead.x >= m_mapDimension.first or
                        newHead.y >= m_mapDimension.second) {
                 m_scorePort.send(std::make_unique<EventT<LooseInd>>());
                 lost = true;
-            } else {
+            } 
+            // SNAKE MOVEMENT; DISAPPEAR END OF TAIL 
+            else {
                 for (auto &segment : m_segments) {
                     if (not --segment.ttl) {
-                        DisplayInd l_evt;
-                        l_evt.x = segment.x;
-                        l_evt.y = segment.y;
-                        l_evt.value = Cell_FREE;
+                        DisplayInd l_evt(segment.x, segment.y);
+                        l_evt.free();
 
                         m_displayPort.send(std::make_unique<EventT<DisplayInd>>(l_evt));
                     }
                 }
             }
         }
-
+        // DISPLAY NEW HEAD
         if (not lost) {
             m_segments.push_front(newHead);
-            DisplayInd placeNewHead;
-            placeNewHead.x = newHead.x;
-            placeNewHead.y = newHead.y;
-            placeNewHead.value = Cell_SNAKE;
+            DisplayInd placeNewHead(newHead.x, newHead.y);
+            placeNewHead.fill();
 
             m_displayPort.send(std::make_unique<EventT<DisplayInd>>(placeNewHead));
 
+        // REMOVE LAST SEGMENT
             m_segments.erase(
                 std::remove_if(
                     m_segments.begin(),
@@ -190,6 +193,15 @@ void Controller::receive(std::unique_ptr<Event> e)
             }
         }
     }
+}
+void DisplayInd::free()
+{
+    value = Cell_FREE;
+}
+
+void DisplayInd::fill()
+{
+    value = Cell_SNAKE;
 }
 
 } // namespace Snake
